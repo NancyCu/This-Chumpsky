@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CFG → CNF (Python in the Browser)</title>
+
+  <!-- ① Pull in Pyodide (latest 0.28.x CDN build) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.28.0/full/pyodide.js"></script>
+  <style>body{font-family:system-ui;padding:1rem;max-width:42rem;margin:auto}</style>
+</head>
+<body>
+  <h1>CFG → CNF Converter (Pyodide)</h1>
+
+  <!-- ② Simple UI -->
+  <textarea id="src" rows="6" cols="60">S -> ASA | aB
+A -> B | S
+B -> b | ε</textarea><br>
+  <button id="run">Convert to CNF</button>
+
+  <pre id="out" style="padding:1rem;background:#f6f8fa;"></pre>
+
+  <!-- ③ Load Python, then run user's code -->
+  <script type="module">
+    const pyodide = await loadPyodide();
+
+    const pythonCode = `
+def to_cnf(src:str)->str:
+    return "Converted CNF goes here\\n" + src.upper()
+`;
+    pyodide.runPython(pythonCode);
+
+    document.getElementById("run").onclick = () => {
+      const raw = document.getElementById("src").value;
+      const result = pyodide.runPython(\`to_cnf("""${raw}""")\`);
+      document.getElementById("out").textContent = result;
+    };
+  </script>
+</body>
+</html>
