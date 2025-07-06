@@ -3,35 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <title>CFG → CNF (Python in the Browser)</title>
-
-  <!-- ① Pull in Pyodide (latest 0.28.x CDN build) -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.28.0/full/pyodide.js"></script>
-  <style>body{font-family:system-ui;padding:1rem;max-width:42rem;margin:auto}</style>
+  <style>
+    body { font-family: system-ui; padding: 1rem; max-width: 42rem; margin: auto }
+    textarea, pre { width: 100%; margin-top: 1rem; }
+  </style>
 </head>
 <body>
   <h1>CFG → CNF Converter (Pyodide)</h1>
 
-  <!-- ② Simple UI -->
-  <textarea id="src" rows="6" cols="60">S -> ASA | aB
+  <textarea id="src" rows="6">S -> ASA | aB
 A -> B | S
-B -> b | ε</textarea><br>
+B -> b | ε</textarea>
   <button id="run">Convert to CNF</button>
+  <pre id="out" style="background:#f6f8fa;padding:1rem;"></pre>
 
-  <pre id="out" style="padding:1rem;background:#f6f8fa;"></pre>
-
-  <!-- ③ Load Python, then run user's code -->
   <script type="module">
     const pyodide = await loadPyodide();
 
+    // Your real CNF converter goes here later — for now, just uppercase
     const pythonCode = `
-def to_cnf(src:str)->str:
-    return "Converted CNF goes here\\n" + src.upper()
+def to_cnf(text):
+    return "Converted CNF (mock):\\n" + text.upper()
 `;
+
     pyodide.runPython(pythonCode);
 
     document.getElementById("run").onclick = () => {
       const raw = document.getElementById("src").value;
-      const result = pyodide.runPython(\`to_cnf("""${raw}""")\`);
+      const result = pyodide.runPython(`to_cnf("""${raw}""")`);
       document.getElementById("out").textContent = result;
     };
   </script>
