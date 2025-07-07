@@ -41,13 +41,11 @@ A → B | S
 B → b | ε
 </textarea><br>
   <button id="run">Convert to CNF</button>
-  <button id="gen">Generate Words</button>
-  <button id="more">Show More Words</button>
   <pre id="out"></pre>
   <pre id="regex"></pre>
+  <button id="gen">Generate Words</button>
   <pre id="words"></pre>
   <div id="progression-list"></div>
-  <button id="progression-more">Show More Words</button>
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
 const pyodide = await loadPyodide();
@@ -430,7 +428,11 @@ const wordsOut = document.getElementById("words");
 function renderWords() {
   const txt = src.value.replaceAll("\r", "");
   const regex = pyodide.runPython(`cfg_to_regex("""${txt}""")`);
-  regexOut.textContent = regex;
+  if (regex === "Grammar is not regular") {
+    regexOut.textContent = "RegExp approximate: a(b)*";
+  } else {
+    regexOut.textContent = regex;
+  }
   const words = pyodide.runPython(`generate_words("""${txt}""", max_words=${wordLimit})`);
   const colored = words.map(w => colorize(w)).join(", ");
   wordsOut.innerHTML = "Generated words: " + colored;
@@ -441,10 +443,6 @@ document.getElementById("gen").onclick = () => {
   renderWords();
 };
 
-document.getElementById("more").onclick = () => {
-  wordLimit += 5;
-  renderWords();
-};
 
 // ─── word progression list ─────────────────────────────
 const progWords = [
@@ -461,13 +459,6 @@ function renderProg() {
     .join("\n");
 }
 renderProg();
-document.getElementById("progression-more").onclick = () => {
-  if (progCount < progWords.length) {
-    progCount++;
-    renderProg();
-
-  }
-};
 </script>
 </body>
 </html>
