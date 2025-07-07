@@ -155,20 +155,27 @@ def convert_to_cnf(g, start):
     for t,v in term_map.items():
         new[v].append([t])
 
-    cnf, cid = defaultdict(list), 1
-    for A,P in new.items():
+    cnf = defaultdict(list)
+    pair_cache = {}
+    cid = 1
+
+    def pair_var(x, y):
+        nonlocal cid
+        key = (x, y)
+        if key not in pair_cache:
+            name = f"A{cid}"
+            cid += 1
+            pair_cache[key] = name
+            cnf[name].append([x, y])
+        return pair_cache[key]
+
+    for A, P in new.items():
         for p in P:
-            if len(p) <= 2:
-                cnf[A].append(p)
-                continue
-            first, rest = p[0], p[1:]
-            prev = A
-            while len(rest) > 1:
-                helper = f"{first}A{cid}"  # e.g.  A A1
-                cid += 1
-                cnf[prev].append([first, helper])
-                prev, first, rest = helper, rest[0], rest[1:]
-            cnf[prev].append([first] + rest)
+            q = p
+            while len(q) > 2:
+                x, y = q[-2], q[-1]
+                q = q[:-2] + [pair_var(x, y)]
+            cnf[A].append(q)
 
     # Deduplicate any repeated productions
     for nt in list(cnf):
