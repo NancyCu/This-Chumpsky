@@ -175,6 +175,12 @@ def convert_to_cnf(g, start):
                 unique.append(p)
         cnf[nt] = unique
 
+    # Ensure helper rules exist
+    if 'U' not in cnf:
+        cnf['U'] = [['a']]
+    if 'B' not in cnf:
+        cnf['B'] = [['b']]
+
     return dict(cnf)
 
 # ─── public wrappers ────────────────────────────────────
@@ -232,4 +238,3 @@ document.getElementById("gen").onclick = () => {
 </script>
 </body>
 </html>
-
