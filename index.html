@@ -439,8 +439,10 @@ function renderWords() {
 }
 
 document.getElementById("gen").onclick = () => {
-  wordLimit = 5;
+  wordLimit += 5;
   renderWords();
+  // Scroll the words output into view for user feedback
+  wordsOut.scrollIntoView({ behavior: "smooth", block: "center" });
 };
 
 
