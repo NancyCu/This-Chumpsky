@@ -44,9 +44,8 @@ B → b | ε
   <button id="gen">Generate Words</button>
   <pre id="out"></pre>
   <pre id="words"></pre>
-  <div id="tram-list"></div>
-  <button id="tram-more">Show More Words</button>
-
+  <div id="progression-list"></div>
+  <button id="progression-more">Show More Words</button>
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
 const pyodide = await loadPyodide();
@@ -360,27 +359,26 @@ document.getElementById("gen").onclick = () => {
   wordsOut.innerHTML = "Generated words: " + colored;
 };
 
-// ─── trầm word progression ─────────────────────────────
-const tramWords = [
-  "trầm",
-  "trầm hương",
-  "trầm hương thơm",
-  "trầm hương thơm ngát",
-  "trầm hương thơm ngát dịu",
-  "trầm hương thơm ngát dịu dàng"
+// ─── word progression list ─────────────────────────────
+const progWords = [
+  "a", "aa", "aaa", "aaab", "aab",
+  "aaba", "aabb", "ab", "aba", "abaa",
+  "abab", "abb", "ba", "baa", "baab",
+  "bab", "baba", "babb", "bba", "bbab"
 ];
-let tramCount = 1;
-const tramList = document.getElementById("tram-list");
-function renderTram() {
-  tramList.innerHTML = tramWords.slice(0, tramCount)
+let progCount = 1;
+const progList = document.getElementById("progression-list");
+function renderProg() {
+  progList.innerHTML = progWords.slice(0, progCount)
     .map(w => `<div>${w}</div>`)
     .join("\n");
 }
-renderTram();
-document.getElementById("tram-more").onclick = () => {
-  if (tramCount < tramWords.length) {
-    tramCount++;
-    renderTram();
+renderProg();
+document.getElementById("progression-more").onclick = () => {
+  if (progCount < progWords.length) {
+    progCount++;
+    renderProg();
+
   }
 };
 </script>
