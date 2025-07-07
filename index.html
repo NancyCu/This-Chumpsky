@@ -35,9 +35,9 @@
 </head>
 <body>
   <h1>Context Free Grammar → Chomsky Normal Form (Reduction)</h1>
-  <textarea id="src" rows="6">S -> ASA | aB
-A -> B | S
-B -> b | ε
+  <textarea id="src" rows="6">S → ASA | aB
+A → B | S
+B → b | ε
 </textarea><br>
   <button id="run">Convert to CNF</button>
   <button id="gen">Generate Words</button>
@@ -99,7 +99,7 @@ def parse_cfg(text):
 
 def format_grammar(g):
     return "\\n".join(
-        f"{A} -> " + " | ".join("".join(p) for p in g[A])
+        f"{A} → " + " | ".join("".join(p) for p in g[A])
         for A in g
     )
 
@@ -143,7 +143,7 @@ def remove_unit_productions(g):
             B = queue.pop(0)
             for p in g[B]:
                 if len(p) == 1 and p[0] in g:
-                    # unit rule  A -> B  →  enqueue B, but DON'T keep A -> B
+                    # unit rule  A → B  →  enqueue B, but DON'T keep A → B
                     if p[0] not in seen:
                         queue.append(p[0])
                         seen.add(p[0])
@@ -333,7 +333,7 @@ function titleCase(str) {
 function colorize(text) {
   return text.split('\n').map(line => {
     const trimmed = line.trim();
-    if (trimmed.endsWith(':') && !trimmed.includes('->')) {
+    if (trimmed.endsWith(':') && !(trimmed.includes('→') || trimmed.includes('->'))) {
       const label = titleCase(trimmed.slice(0, -1));
       return `<span style="text-decoration: underline">${label}:</span>`;
     }
