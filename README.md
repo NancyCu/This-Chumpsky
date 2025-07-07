@@ -41,3 +41,28 @@ bit more flair.
 
 That's it! Enjoy experimenting with grammars and exploring how they transform
 into Chomsky Normal Form.
+
+## Regular Expression Examples
+
+Although the app focuses on context‑free grammars, some simple grammars describe languages that can also be written using regular expressions. Here are a few examples:
+
+- A grammar with productions:
+
+  ```text
+  S → aB
+  B → bB | ε
+  ```
+
+  generates the language `ab*`.
+
+- The grammar
+
+  ```text
+  S → aS | bS | ε
+  ```
+
+  corresponds to the expression `(a ∪ b)*`.
+
+- If Σ is your alphabet and you want all non‑empty strings ending in `b`, a concise regex is `Σ+b`.
+
+These representations can be handy when comparing a CFG to a simpler pattern.
