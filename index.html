@@ -207,8 +207,19 @@ def cfg_to_cnf(text):
     def step(lbl):
         log.append((lbl, format_grammar(G)))
 
-    if any(S in p for P in G.values() for p in P):
-        G = {**{"S0": [[S]]}, **G}
+    start_rhs = any(S in p for P in G.values() for p in P)
+    nullable = {A for A, P in G.items() if ['ε'] in P}
+    changed = True
+    while changed:
+        changed = False
+        for A, P in G.items():
+            if A in nullable:
+                continue
+            if any(all(s in nullable for s in q) for q in P):
+                nullable.add(A); changed = True
+    if start_rhs or S in nullable:
+        rule = [[S]] + ([['ε']] if S in nullable else [])
+        G = {**{"S0": rule}, **G}
         S = "S0"
         step("Add new start symbol")
     else:
