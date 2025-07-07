@@ -44,6 +44,8 @@ B → b | ε
   <button id="gen">Generate Words</button>
   <pre id="out"></pre>
   <pre id="words"></pre>
+  <div id="tram-list"></div>
+  <button id="tram-more">Show More Words</button>
 
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
@@ -356,6 +358,30 @@ document.getElementById("gen").onclick = () => {
   const words = pyodide.runPython(`generate_words("""${txt}""")`);
   const colored = words.map(w => colorize(w)).join(", ");
   wordsOut.innerHTML = "Generated words: " + colored;
+};
+
+// ─── trầm word progression ─────────────────────────────
+const tramWords = [
+  "trầm",
+  "trầm hương",
+  "trầm hương thơm",
+  "trầm hương thơm ngát",
+  "trầm hương thơm ngát dịu",
+  "trầm hương thơm ngát dịu dàng"
+];
+let tramCount = 1;
+const tramList = document.getElementById("tram-list");
+function renderTram() {
+  tramList.innerHTML = tramWords.slice(0, tramCount)
+    .map(w => `<div>${w}</div>`)
+    .join("\n");
+}
+renderTram();
+document.getElementById("tram-more").onclick = () => {
+  if (tramCount < tramWords.length) {
+    tramCount++;
+    renderTram();
+  }
 };
 </script>
 </body>
