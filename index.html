@@ -77,7 +77,7 @@ def _tokenize(rh_side: str):
 # ─── Parsing ────────────────────────────────────────────
 def parse_cfg(text):
     g = defaultdict(list)
-    arrow = re.compile(r'\\s*(->|→)\\s*')
+    arrow = re.compile(r'\s*(->|→)\s*')
     for line in text.strip().splitlines():
         if not line.strip():
             continue
@@ -88,7 +88,7 @@ def parse_cfg(text):
         for prod in right.split('|'):
             prod = prod.strip()
             
-            if prod in ('ε', 'E', '', '𝜺'):  # Recognize all ε variants
+            if prod in ('ε', 'ɛ', 'E', '', '𝜺'):  # Recognize all ε variants
 
                 g[left].append(['ε'])
                 continue
