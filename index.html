@@ -22,11 +22,27 @@ B -> b | ε</textarea>
     const pyodide = await loadPyodide();
 
     // Your real CNF converter goes here later — for now, just uppercase
-    const pythonCode = `
-def to_cnf(text):
-    return "Converted CNF (mock):\\n" + text.upper()
-`;
+const pythonCode = `
+import re
+from collections import defaultdict
 
+def to_cnf(text):
+    grammar = defaultdict(list)
+
+    for line in text.strip().splitlines():
+        if not line.strip(): continue
+        left, right = re.split(r'\\s*->\\s*', line)
+        for production in right.split('|'):
+            prod = production.strip().replace('E', 'ε')
+            symbols = prod.split() if ' ' in prod else list(prod)
+            grammar[left.strip()].append(symbols)
+
+    def format(g):
+        return '\\n'.join(f"{nt} -> {' | '.join(''.join(p) for p in ps)}" for nt, ps in g.items())
+
+    # Demo only — mock simplifier:
+    return "Converted CNF (basic parser only):\\n" + format(grammar)
+`;
     pyodide.runPython(pythonCode);
 
     document.getElementById("run").onclick = () => {
