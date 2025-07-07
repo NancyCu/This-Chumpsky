@@ -46,7 +46,6 @@ B → b | ε
   <pre id="words"></pre>
   <div id="progression-list"></div>
   <button id="progression-more">Show More Words</button>
-
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
 const pyodide = await loadPyodide();
@@ -379,6 +378,7 @@ document.getElementById("progression-more").onclick = () => {
   if (progCount < progWords.length) {
     progCount++;
     renderProg();
+
   }
 };
 </script>
