@@ -42,7 +42,7 @@ def parse_cfg(text):
         left, right = m[0].strip(), m[2].strip()
         for prod in right.split('|'):
             prod = prod.strip()
-            if prod in ('ε', 'E', '', '𝜺'):
+            if prod in ('ε', 'E', '', '𝜺'):  # Recognize all ε variants
                 g[left].append(['ε'])
                 continue
             if ' ' in prod:
