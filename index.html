@@ -17,77 +17,176 @@ A -> B | S
 B -> b | ε</textarea><br>
   <button id="run">Convert to CNF</button>
   <pre id="out"></pre>
-
 <script type="module">
-/* ---------- 1.  spin-up Pyodide ---------- */
+/* ---------- 1  Spin-up Pyodide ---------- */
 const pyodide = await loadPyodide();
 
-/* ---------- 2.  full CNF engine ---------- */
+/* ---------- 2  Full converter from cnf_converter.py ---------- */
 const pythonCode = `
 import re, itertools
 from collections import defaultdict, deque
 
-# ---------- Parser ----------
+# === parse_cfg ===
 def parse_cfg(text):
     g = defaultdict(list)
+    arrow = re.compile(r'\\s*(->|→)\\s*')
     for line in text.strip().splitlines():
         if not line.strip(): continue
-        left, right = re.split(r'\\s*->\\s*', line)
-        for prod in right.split('|'):
-            prod = prod.strip().replace('E','ε')
-            symbols = prod.split() if ' ' in prod else list(prod)
-            g[left.strip()].append(symbols or ['ε'])
+        m = arrow.split(line, maxsplit=1)
+        if len(m) < 3: continue
+        left, right = m[0].strip(), m[2].strip()
+        for p in right.split('|'):
+            prod = p.strip().replace('E','ε')
+            if prod == 'ε':
+                symbols = ['ε']
+            else:
+                symbols = prod.split() if ' ' in prod else list(prod)
+            g[left].append(symbols)
     return dict(g)
 
-# ---------- Pretty-printer ----------
-def fmt(g):
-    return "\\n".join(f"{A} -> " + " | ".join(" ".join(p) for p in g[A]) for A in g)
+# === helpers from your cnf_converter.py ===
+def format_grammar(grammar):
+    return "\\n".join(f"{nt} -> " +
+                      " | ".join(" ".join(prod) for prod in grammar[nt])
+                      for nt in grammar)
 
-# ---------- utility steps ----------
-def remove_null(g,s): ...
-def remove_unit(g): ...
-def remove_useless(g,s): ...
-def convert_to_cnf(g): ...
-#  ⬆︎   paste the exact bodies from your  cnf_converter.py  (unchanged)
+# --------- (paste bodies unchanged) ---------
+def remove_null_productions(grammar,start):
+    nullable=set()
+    for nt,ps in grammar.items():
+        for p in ps:
+            if p==['ε']: nullable.add(nt)
+    changed=True
+    while changed:
+        changed=False
+        for nt,ps in grammar.items():
+            for p in ps:
+                if all(s in nullable for s in p) and nt not in nullable:
+                    nullable.add(nt); changed=True
+    new=defaultdict(list)
+    for nt,ps in grammar.items():
+        for p in ps:
+            if p==['ε']: continue
+            pos=[i for i,s in enumerate(p) if s in nullable]
+            for mask in range(1<<len(pos)):
+                np=[]
+                for i,s in enumerate(p):
+                    if i in pos and (mask>>pos.index(i))&1: continue
+                    np.append(s)
+                if not np and nt!=start: continue
+                if np not in new[nt]: new[nt].append(np)
+    return dict(new)
 
-# ---------- public API ----------
-def to_cnf(text):
-    steps=[]
-    def log(lbl,G): steps.append((lbl,fmt(G)))
+def remove_unit_productions(grammar):
+    new=defaultdict(list)
+    for nt in grammar:
+        q=[nt]; seen=set()
+        while q:
+            cur=q.pop(0)
+            for p in grammar[cur]:
+                if len(p)==1 and p[0] in grammar:
+                    if p[0] not in seen: q.append(p[0]); seen.add(p[0])
+                else:
+                    if p not in new[nt]: new[nt].append(p)
+    return dict(new)
 
-    G = parse_cfg(text);  S = next(iter(G));               log("Original CFG",G)
-    G = remove_null(G,S);                                 log("ε-removed",G)
-    G = remove_unit(G);                                   log("Unit-removed",G)
-    G = remove_useless(G,S);                              log("Useless-removed",G)
-    G = convert_to_cnf(G);                                log("CNF",G)
+def remove_useless_symbols(grammar,start):
+    gen=set()
+    changed=True
+    while changed:
+        changed=False
+        for nt,ps in grammar.items():
+            for p in ps:
+                if all(s not in grammar for s in p):
+                    if nt not in gen: gen.add(nt); changed=True
+                if all(s in gen or s not in grammar for s in p):
+                    if nt not in gen: gen.add(nt); changed=True
+    grammar={nt:[p for p in ps if all(s in gen or s not in grammar for s in p)]
+             for nt,ps in grammar.items() if nt in gen}
+    reach=set(); q=[start]
+    while q:
+        nt=q.pop(0)
+        if nt in reach: continue
+        reach.add(nt)
+        for p in grammar.get(nt,[]):
+            for s in p:
+                if s in grammar: q.append(s)
+    return {nt:ps for nt,ps in grammar.items() if nt in reach}
 
-    return "\\n\\n".join(f"{lbl}:\\n{body}" for lbl,body in steps)
+def convert_to_cnf(grammar,start):
+    new=defaultdict(list); term_map={}; term_id=1
+    def T(t):
+        nonlocal term_id
+        if t not in term_map:
+            term_map[t]=f"T{term_id}"; term_id+=1
+        return term_map[t]
+    for nt,ps in grammar.items():
+        for p in ps:
+            if len(p)>1:
+                p=[s if s in grammar or s=='ε' else T(s) for s in p]
+            new[nt].append(p)
+    for t,v in term_map.items(): new[v].append([t])
 
-def generate(text,max_len=4,max_words=20):
+    final=defaultdict(list); cid=1
+    for nt,ps in new.items():
+        for p in ps:
+            if len(p)<=2: final[nt].append(p); continue
+            cur=p; prev=nt
+            while len(cur)>2:
+                X=f"X{cid}"; cid+=1
+                final[prev].append([cur[0],X])
+                prev=X; cur=cur[1:]
+            final[prev].append(cur)
+    return dict(final)
+
+# === glue: cfg_to_cnf & generate_words ===
+def cfg_to_cnf(text):
     G=parse_cfg(text); S=next(iter(G))
-    words=set(); Q=deque([[S]])
-    while Q and len(words)<max_words:
-        seq=Q.popleft()
+    steps=[]
+    def log(lbl,g): steps.append((lbl,format_grammar(g)))
+    log("Original CFG",G)
+    G=remove_null_productions(G,S);  log("ε-removed",G)
+    G=remove_unit_productions(G);    log("unit-removed",G)
+    G=remove_useless_symbols(G,S);   log("useless-removed",G)
+    G=convert_to_cnf(G,S);           log("CNF",G)
+    return steps                     # list of (title, grammar-text)
+
+def generate_words(text,max_len=4,max_words=20):
+    G=parse_cfg(text); S=next(iter(G))
+    words=set(); dq=deque([[S]])
+    while dq and len(words)<max_words:
+        seq=dq.popleft()
         term="".join(c for c in seq if c not in G and c!="ε")
         if len(term)>max_len: continue
         if all(c not in G for c in seq):
-            if term: words.add(term); continue
-        for i,sym in enumerate(seq):
-            if sym in G:
-                for prod in G[sym]:
-                    Q.append(seq[:i]+[t for t in prod if t!="ε"]+seq[i+1:]); break
+            words.add(term); continue
+        for i,s in enumerate(seq):
+            if s in G:
+                for p in G[s]:
+                    dq.append(seq[:i]+[t for t in p if t!="ε"]+seq[i+1:]); break
     return sorted(words)
 `;
 pyodide.runPython(pythonCode);
 
-/* ---------- 3.  wire the buttons ---------- */
-const out      = document.getElementById("out");
-const textarea = document.getElementById("src");
+/* ---------- 3  Wire the buttons ---------- */
+const out = document.getElementById("out");
+const src = document.getElementById("src");
+
 document.getElementById("run").onclick = () => {
-  out.textContent = pyodide.runPython(`to_cnf("""${textarea.value}""")`);
+  const text = src.value.replaceAll("\\r","");      // Windows line-ending fix
+  const steps = pyodide.runPython(`cfg_to_cnf("""${text}""")`);
+  out.textContent = steps.map(
+    s => `${s[0]}:\n${s[1]}\n`
+  ).join("\n");
 };
 
-/* optional extra: language generation slider & button */
+/* (optional) language generation button: */
+document.getElementById("gen")?.addEventListener("click",()=>{
+  const text = src.value.replaceAll("\\r","");
+  const words = pyodide.runPython(`generate_words("""${text}""",4,20)`);
+  out.textContent = "Generated words: " + words.join(", ");
+});
 </script>
+
 </body>
 </html>
