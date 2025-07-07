@@ -42,7 +42,9 @@ B → b | ε
 </textarea><br>
   <button id="run">Convert to CNF</button>
   <button id="gen">Generate Words</button>
+  <button id="more">Show More Words</button>
   <pre id="out"></pre>
+  <pre id="regex"></pre>
   <pre id="words"></pre>
   <div id="progression-list"></div>
   <button id="progression-more">Show More Words</button>
@@ -304,12 +306,85 @@ def generate_words(text, max_len=4, max_words=20):
                     dq.append(seq[:i] + [t for t in p if t!='ε'] + seq[i+1:])
                 break
     return sorted(words)
+
+def cfg_to_regex(text):
+    g = parse_cfg(text)
+    start = next(iter(g))
+    for A, P in g.items():
+        for p in P:
+            if p == ['ε']:
+                continue
+            if len(p) == 1:
+                if p[0] in g:
+                    return 'Grammar is not regular'
+            elif len(p) == 2:
+                if p[0] in g or p[1] not in g:
+                    return 'Grammar is not regular'
+            else:
+                return 'Grammar is not regular'
+
+    states = list(g.keys()) + ['F']
+    final = 'F'
+    trans = defaultdict(str)
+
+    def add_edge(u, v, label):
+        if not trans[(u, v)]:
+            trans[(u, v)] = label
+        else:
+            if label not in trans[(u, v)].split('|'):
+                trans[(u, v)] += '|' + label
+
+    for A, P in g.items():
+        for p in P:
+            if p == ['ε']:
+                add_edge(A, final, '')
+            elif len(p) == 1:
+                add_edge(A, final, p[0])
+            else:
+                add_edge(A, p[1], p[0])
+
+    def star(r):
+        if r == '' or r is None:
+            return ''
+        if len(r) == 1 or (len(r) > 1 and r[0] == '(' and r[-1] == ')'):
+            return r + '*'
+        return '(' + r + ')*'
+
+    states_to_remove = [s for s in states if s not in (start, final)]
+    for q in states_to_remove:
+        rq = trans.get((q, q), '')
+        rq_star = star(rq)
+        for i in states:
+            if i == q:
+                continue
+            iq = trans.get((i, q), '')
+            if not iq:
+                continue
+            for j in states:
+                if j == q:
+                    continue
+                qj = trans.get((q, j), '')
+                if not qj:
+                    continue
+                new = iq + rq_star + qj
+                key = (i, j)
+                if trans[key]:
+                    if new not in trans[key].split('|'):
+                        trans[key] += '|' + new
+                else:
+                    trans[key] = new
+        for k in [k for k in trans if q in k]:
+            del trans[k]
+
+    return trans.get((start, final), '')
 `;
 pyodide.runPython(pythonCode);
 
 /* ========== 3 ▸ connect the buttons (JS) ========== */
 const out = document.getElementById("out");
 const src = document.getElementById("src");
+const regexOut = document.getElementById("regex");
+let wordLimit = 5;
 
 // Map each letter to a consistent color
 const colorMap = {};
@@ -352,11 +427,23 @@ document.getElementById("run").onclick = () => {
 };
 
 const wordsOut = document.getElementById("words");
-document.getElementById("gen").onclick = () => {
+function renderWords() {
   const txt = src.value.replaceAll("\r", "");
-  const words = pyodide.runPython(`generate_words("""${txt}""")`);
+  const regex = pyodide.runPython(`cfg_to_regex("""${txt}""")`);
+  regexOut.textContent = regex;
+  const words = pyodide.runPython(`generate_words("""${txt}""", max_words=${wordLimit})`);
   const colored = words.map(w => colorize(w)).join(", ");
   wordsOut.innerHTML = "Generated words: " + colored;
+}
+
+document.getElementById("gen").onclick = () => {
+  wordLimit = 5;
+  renderWords();
+};
+
+document.getElementById("more").onclick = () => {
+  wordLimit += 5;
+  renderWords();
 };
 
 // ─── word progression list ─────────────────────────────
