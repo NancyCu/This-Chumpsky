@@ -124,10 +124,19 @@ def convert_to_cnf(g, start):
     new, term_map, term_id = defaultdict(list), {}, 1
 
     def T(t):
-        nonlocal term_id
-        # textbook wants U→a ;  leave b wrapped by existing B rule
+        """
+        Map a terminal that appears inside a long production to its dedicated
+        non‑terminal.  Special rules:
+
+        • 'a'  →  'U'  (textbook helper)
+        • 'b'  →  'B'  (reuse the real non‑terminal that already expands to b)
+        • everything else →  fresh T₁, T₂, …
+        """
         if t == 'a':
             return 'U'
+        if t == 'b':
+            return 'B'     # do *not* create T1 for 'b'
+        nonlocal term_id
         if t not in term_map:
             term_map[t] = f"T{term_id}"
             term_id += 1
@@ -154,6 +163,18 @@ def convert_to_cnf(g, start):
                 cnf[prev].append([first, helper])
                 prev, first, rest = helper, rest[0], rest[1:]
             cnf[prev].append([first] + rest)
+
+    # Deduplicate any repeated productions
+    for nt in list(cnf):
+        seen = set()
+        unique = []
+        for p in cnf[nt]:
+            tup = tuple(p)
+            if tup not in seen:
+                seen.add(tup)
+                unique.append(p)
+        cnf[nt] = unique
+
     return dict(cnf)
 
 # ─── public wrappers ────────────────────────────────────
