@@ -26,9 +26,8 @@ const pythonCode = `
 import re
 from collections import defaultdict
 
-def to_cnf(text):
+def parse_cfg(text):
     grammar = defaultdict(list)
-
     for line in text.strip().splitlines():
         if not line.strip(): continue
         left, right = re.split(r'\\s*->\\s*', line)
@@ -36,12 +35,120 @@ def to_cnf(text):
             prod = production.strip().replace('E', 'ε')
             symbols = prod.split() if ' ' in prod else list(prod)
             grammar[left.strip()].append(symbols)
+    return dict(grammar)
 
-    def format(g):
-        return '\\n'.join(f"{nt} -> {' | '.join(''.join(p) for p in ps)}" for nt, ps in g.items())
+def remove_null_productions(grammar, start):
+    nullable = set()
+    for nt, prods in grammar.items():
+        for prod in prods:
+            if prod == ['ε']:
+                nullable.add(nt)
+    changed = True
+    while changed:
+        changed = False
+        for nt, prods in grammar.items():
+            for prod in prods:
+                if all(s in nullable for s in prod):
+                    if nt not in nullable:
+                        nullable.add(nt)
+                        changed = True
+    new_grammar = defaultdict(list)
+    for nt, prods in grammar.items():
+        for prod in prods:
+            if prod == ['ε']:
+                continue
+            positions = [i for i, s in enumerate(prod) if s in nullable]
+            total = 1 << len(positions)
+            for mask in range(total):
+                new_prod = []
+                for i, s in enumerate(prod):
+                    if i in positions and ((mask >> positions.index(i)) & 1):
+                        continue
+                    new_prod.append(s)
+                if not new_prod and nt != start:
+                    continue
+                if new_prod not in new_grammar[nt]:
+                    new_grammar[nt].append(new_prod)
+    return dict(new_grammar)
 
-    # Demo only — mock simplifier:
-    return "Converted CNF (basic parser only):\\n" + format(grammar)
+def remove_unit_productions(grammar):
+    new_grammar = defaultdict(list)
+    for nt in grammar:
+        queue = [nt]
+        visited = set()
+        while queue:
+            current = queue.pop(0)
+            for prod in grammar.get(current, []):
+                if len(prod) == 1 and prod[0] in grammar:
+                    if prod[0] not in visited:
+                        queue.append(prod[0])
+                        visited.add(prod[0])
+                else:
+                    if prod not in new_grammar[nt]:
+                        new_grammar[nt].append(prod)
+    return dict(new_grammar)
+
+def convert_to_cnf(grammar):
+    new_grammar = defaultdict(list)
+    term_map = {}
+    term_id = 1
+
+    def get_term_var(t):
+        nonlocal term_id
+        if t not in term_map:
+            term_map[t] = f"T{term_id}"
+            term_id += 1
+        return term_map[t]
+
+    for nt, prods in grammar.items():
+        for prod in prods:
+            if len(prod) > 1:
+                replaced = []
+                for sym in prod:
+                    if sym in grammar or sym == "ε":
+                        replaced.append(sym)
+                    else:
+                        replaced.append(get_term_var(sym))
+                new_grammar[nt].append(replaced)
+            else:
+                new_grammar[nt].append(prod)
+
+    for t, var in term_map.items():
+        new_grammar[var].append([t])
+
+    final = defaultdict(list)
+    chain_id = 1
+    for nt, prods in new_grammar.items():
+        for prod in prods:
+            if len(prod) <= 2:
+                final[nt].append(prod)
+                continue
+            current = prod
+            prev = nt
+            while len(current) > 2:
+                first, second = current[0], current[1]
+                new_var = f"X{chain_id}"
+                chain_id += 1
+                final[prev].append([first, new_var])
+                prev = new_var
+                current = current[1:]
+            final[prev].append(current)
+    return dict(final)
+
+def format_grammar(grammar):
+    lines = []
+    for nt, prods in grammar.items():
+        right = [" ".join(prod) for prod in prods]
+        lines.append(f"{nt} -> {' | '.join(right)}")
+    return "\\n".join(lines)
+
+def to_cnf(text):
+    grammar = parse_cfg(text)
+    start = next(iter(grammar))
+    grammar = remove_null_productions(grammar, start)
+    grammar = remove_unit_productions(grammar)
+    grammar = convert_to_cnf(grammar)
+    return format_grammar(grammar)
 `;
     pyodide.runPython(pythonCode);
 
