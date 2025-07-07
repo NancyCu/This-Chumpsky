@@ -44,6 +44,8 @@ B → b | ε
   <button id="gen">Generate Words</button>
   <pre id="out"></pre>
   <pre id="words"></pre>
+  <div id="progression-list"></div>
+  <button id="progression-more">Show More Words</button>
 
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
@@ -356,6 +358,28 @@ document.getElementById("gen").onclick = () => {
   const words = pyodide.runPython(`generate_words("""${txt}""")`);
   const colored = words.map(w => colorize(w)).join(", ");
   wordsOut.innerHTML = "Generated words: " + colored;
+};
+
+// ─── word progression list ─────────────────────────────
+const progWords = [
+  "a", "aa", "aaa", "aaab", "aab",
+  "aaba", "aabb", "ab", "aba", "abaa",
+  "abab", "abb", "ba", "baa", "baab",
+  "bab", "baba", "babb", "bba", "bbab"
+];
+let progCount = 1;
+const progList = document.getElementById("progression-list");
+function renderProg() {
+  progList.innerHTML = progWords.slice(0, progCount)
+    .map(w => `<div>${w}</div>`)
+    .join("\n");
+}
+renderProg();
+document.getElementById("progression-more").onclick = () => {
+  if (progCount < progWords.length) {
+    progCount++;
+    renderProg();
+  }
 };
 </script>
 </body>
