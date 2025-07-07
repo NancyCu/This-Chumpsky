@@ -117,15 +117,18 @@ def remove_null_productions(g, start):
     for A, P in g.items():
         for p in P:
             if p == ['ε']:
-                continue
+                continue                      # never copy the original ε
             pos = [i for i,s in enumerate(p) if s in nullable]
+
             for mask in range(1 << len(pos)):
                 q = [s for i,s in enumerate(p)
                        if not (i in pos and (mask >> pos.index(i)) & 1)]
-                if not q:
+
+                if not q:                     # would be ε
                     if A == start and ['ε'] not in new[A]:
-                        new[A].append(['ε'])
-                    continue
+                        new[A].append(['ε'])  # keep ε only for start symbol
+                    continue                  # skip for all other A
+
                 if q not in new[A]:
                     new[A].append(q)
     return dict(new)
@@ -138,12 +141,14 @@ def remove_unit_productions(g):
         while queue:
             B = queue.pop(0)
             for p in g[B]:
-                if len(p)==1 and p[0] in g:
+                if len(p) == 1 and p[0] in g:
+                    # unit rule  A -> B  →  enqueue B, but DON'T keep A -> B
                     if p[0] not in seen:
-                        queue.append(p[0]); seen.add(p[0])
+                        queue.append(p[0])
+                        seen.add(p[0])
                 else:
                     if p not in new[A]:
-                        new[A].append(p)
+                        new[A].append(p)      # keep only non-unit bodies
     return dict(new)
 
 # ─── useless-symbol removal ─────────────────────────────
