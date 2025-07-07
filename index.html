@@ -144,8 +144,8 @@ def format_grammar(grammar):
 
 def to_cnf(text):
     steps = []
-    def add_step(label, g):
-        steps.append((label, format_grammar(g)))
+    def add_step(title, g):
+        steps.append((title, format_grammar(g)))
 
     grammar = parse_cfg(text)
     start = next(iter(grammar))
@@ -163,11 +163,8 @@ def to_cnf(text):
     grammar = convert_to_cnf(grammar)
     add_step("Chomsky Normal Form (CNF)", grammar)
 
-    # Package steps as a plain text block
-    result = ""
-    for label, g in steps:
-        result += f"{label}:\n{g}\n\n"
-    return result
+    # Return combined step-by-step view
+    return "\n\n".join(f"{title}:\n{g}" for title, g in steps)
 `;
     pyodide.runPython(pythonCode);
 
