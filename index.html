@@ -42,7 +42,9 @@ def parse_cfg(text):
         left, right = m[0].strip(), m[2].strip()
         for prod in right.split('|'):
             prod = prod.strip()
+            
             if prod in ('ε', 'E', '', '𝜺'):  # Recognize all ε variants
+
                 g[left].append(['ε'])
                 continue
             if ' ' in prod:
@@ -148,13 +150,16 @@ def convert_to_cnf(g, start):
     for t, v in term_map.items():
         wrapped[v].append([t])
 
-    cnf, pid = defaultdict(list), 1
+    cnf, pair_cache, pid = defaultdict(list), {}, 1
 
     def bin_var(x, y):
         nonlocal pid
-        name = f"A{pid}"; pid += 1
-        cnf[name].append([x, y])
-        return name
+        key = (x, y)
+        if key not in pair_cache:
+            name = f"A{pid}"; pid += 1
+            pair_cache[key] = name
+            cnf[name].append([x, y])
+        return pair_cache[key]
 
     # Right-binarise productions
     for A, P in wrapped.items():
