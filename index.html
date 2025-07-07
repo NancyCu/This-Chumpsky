@@ -341,7 +341,7 @@ def cfg_to_regex(text):
             else:
                 add_edge(A, p[1], p[0])
 
-    def star(r):
+    def star_regex(r):
         if r == '' or r is None:
             return ''
         if len(r) == 1 or (len(r) > 1 and r[0] == '(' and r[-1] == ')'):
@@ -351,19 +351,19 @@ def cfg_to_regex(text):
     states_to_remove = [s for s in states if s not in (start, final)]
     for q in states_to_remove:
         rq = trans.get((q, q), '')
-        rq_star = star(rq)
+        rq_star = star_regex(rq)
         for i in states:
             if i == q:
                 continue
-            iq = trans.get((i, q), '')
-            if not iq:
+            if (i, q) not in trans:
                 continue
+            iq = trans[(i, q)]
             for j in states:
                 if j == q:
                     continue
-                qj = trans.get((q, j), '')
-                if not qj:
+                if (q, j) not in trans:
                     continue
+                qj = trans[(q, j)]
                 new = iq + rq_star + qj
                 key = (i, j)
                 if trans[key]:
@@ -373,8 +373,62 @@ def cfg_to_regex(text):
                     trans[key] = new
         for k in [k for k in trans if q in k]:
             del trans[k]
+    r_ss = trans.get((start, start), '')
+    r_sf = trans.get((start, final), '')
+    regex = (star_regex(r_ss) + r_sf) if r_sf is not None else star_regex(r_ss)
+    r_ff = trans.get((final, final), '')
+    if r_ff:
+        regex += star_regex(r_ff)
+    return regex
 
-    return trans.get((start, final), '')
+
+def star(value):
+    """
+    Dummy implementation of star() for demonstration purposes.
+    This function could perform additional formatting or processing on the value.
+    """
+    # For the sake of example, simply return the string representation of the value
+    return str(value) if value is not None else ''
+
+
+def process_trans(trans, start, final, key):
+    # Retrieve values safely using trans.get() with a default of None
+    r_ss = trans.get((start, start), None)
+    r_sf = trans.get((start, final), None)
+    regex = (star(r_ss) + r_sf) if r_sf is not None else star(r_ss)
+    r_ff = trans.get((final, final), None)
+
+    # Option 1: Directly get the value using trans.get() (None will be returned by default if key is missing)
+    value_option1 = trans.get(key)
+
+    # Option 2: Check explicitly if the key exists to handle a missing key case
+    if key in trans:
+        value_option2 = trans[key]
+    else:
+        value_option2 = None  # or an alternative default action
+
+    return {
+        'regex': regex,
+        'r_ff': r_ff,
+        'value_option1': value_option1,
+        'value_option2': value_option2
+    }
+
+
+if __name__ == '__main__':
+    # Dummy dictionary for trans
+    trans = {
+        ('a', 'a'): 'foo',
+        ('a', 'b'): 'bar',
+        ('b', 'b'): 'baz',
+        'sample_key': 'sample_value'
+    }
+    start = 'a'
+    final = 'b'
+    key = 'sample_key'
+
+    result = process_trans(trans, start, final, key)
+    print("Result:", result)
 `;
 pyodide.runPython(pythonCode);
 
