@@ -41,8 +41,14 @@ def parse_cfg(text):
             continue
         left, right = m[0].strip(), m[2].strip()
         for prod in right.split('|'):
-            p = prod.strip().replace('E', 'ε')
-            symbols = p.split() if ' ' in p else list(p) or ['ε']
+            prod = prod.strip()
+            if prod in ('ε', 'E', ''):
+                g[left].append(['ε'])
+                continue
+            if ' ' in prod:
+                symbols = [tok.strip() for tok in prod.split() if tok.strip()]
+            else:
+                symbols = list(prod)
             g[left].append(symbols)
     return dict(g)
 
@@ -123,78 +129,69 @@ def remove_useless_symbols(g, start):
 
 # ─── CNF conversion (wrap-all-terminals + right-binarise) ─
 def convert_to_cnf(g, start):
-    new, term_map, term_id = defaultdict(list), {}, 1
+    wrapped, term_map, tid = defaultdict(list), {}, 1
 
-    def T(t):
-        """
-        Map a terminal that appears inside a long production to its dedicated
-        non‑terminal.  Special rules:
-
-        • 'a'  →  'U'  (textbook helper)
-        • 'b'  →  'B'  (reuse the real non‑terminal that already expands to b)
-        • everything else →  fresh T₁, T₂, …
-        """
-        if t == 'a':
-            return 'U'
-        if t == 'b':
-            return 'B'     # do *not* create T1 for 'b'
-        nonlocal term_id
+    def term_var(t):
+        nonlocal tid
         if t not in term_map:
-            term_map[t] = f"T{term_id}"
-            term_id += 1
+            term_map[t] = f"T{tid}"; tid += 1
         return term_map[t]
 
-    for A,P in g.items():
+    # Replace terminals in long rules
+    for A, P in g.items():
         for p in P:
             if len(p) == 1:
-                # single terminals already satisfy CNF
-                wrapped = p
+                wrapped[A].append(p)
             else:
-                wrapped = [s if s in g or s=='ε' else T(s) for s in p]
-            new[A].append(wrapped)
-    for t,v in term_map.items():
-        new[v].append([t])
+                q = [s if s in g else term_var(s) for s in p]
+                wrapped[A].append(q)
+    for t, v in term_map.items():
+        wrapped[v].append([t])
 
-    cnf = defaultdict(list)
-    pair_cache = {}
-    cid = 1
+    cnf, pid = defaultdict(list), 1
 
-    def pair_var(x, y):
-        nonlocal cid
-        key = (x, y)
-        if key not in pair_cache:
-            name = f"A{cid}"
-            cid += 1
-            pair_cache[key] = name
-            cnf[name].append([x, y])
-        return pair_cache[key]
+    def bin_var(x, y):
+        nonlocal pid
+        name = f"A{pid}"; pid += 1
+        cnf[name].append([x, y])
+        return name
 
-    for A, P in new.items():
+    # Right-binarise productions
+    for A, P in wrapped.items():
         for p in P:
-            q = p
-            while len(q) > 2:
-                x, y = q[-2], q[-1]
-                q = q[:-2] + [pair_var(x, y)]
-            cnf[A].append(q)
+            while len(p) > 2:
+                x, y = p[-2], p[-1]
+                p = p[:-2] + [bin_var(x, y)]
+            cnf[A].append(p)
 
-    # Deduplicate any repeated productions
-    for nt in list(cnf):
+    # Deduplicate
+    for A in list(cnf):
+        uniq = []
         seen = set()
-        unique = []
-        for p in cnf[nt]:
-            tup = tuple(p)
-            if tup not in seen:
-                seen.add(tup)
-                unique.append(p)
-        cnf[nt] = unique
-
-    # Ensure helper rules exist
-    if 'U' not in cnf:
-        cnf['U'] = [['a']]
-    if 'B' not in cnf:
-        cnf['B'] = [['b']]
+        for p in cnf[A]:
+            t = tuple(p)
+            if t not in seen:
+                seen.add(t)
+                uniq.append(p)
+        cnf[A] = uniq
 
     return dict(cnf)
+
+def validate_cnf(g, start):
+    for A, P in g.items():
+        for p in P:
+            if p == ['ε']:
+                if A != start:
+                    return False
+            elif len(p) == 1:
+                if p[0] in g:
+                    return False
+            elif len(p) == 2:
+                if p[0] not in g or p[1] not in g:
+                    return False
+            else:
+                return False
+    return True
 
 # ─── public wrappers ────────────────────────────────────
 def cfg_to_cnf(text):
@@ -215,6 +212,7 @@ def cfg_to_cnf(text):
     G = remove_unit_productions(G);        step("unit-removed")
     G = remove_useless_symbols(G, S);      step("useless-removed")
     G = convert_to_cnf(G, S)
+    assert validate_cnf(G, S)
     log.append(("CNF", format_grammar(G)))
     return "\\n\\n".join(f"{lbl}:\\n{body}" for lbl, body in log)
 
