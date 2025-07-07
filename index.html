@@ -144,7 +144,11 @@ def convert_to_cnf(g, start):
 
     for A,P in g.items():
         for p in P:
-            wrapped = [s if s in g or s=='ε' else T(s) for s in p]
+            if len(p) == 1:
+                # single terminals already satisfy CNF
+                wrapped = p
+            else:
+                wrapped = [s if s in g or s=='ε' else T(s) for s in p]
             new[A].append(wrapped)
     for t,v in term_map.items():
         new[v].append([t])
