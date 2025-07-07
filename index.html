@@ -422,6 +422,9 @@ document.getElementById("run").onclick = () => {
   const txt = src.value.replaceAll("\r", "");
   const result = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
   out.innerHTML = colorize(result);
+  // Reset wordLimit and update generated words for new grammar
+  wordLimit = 5;
+  renderWords();
 };
 
 const wordsOut = document.getElementById("words");
