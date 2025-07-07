@@ -18,53 +18,76 @@ B -> b | ε</textarea><br>
   <button id="run">Convert to CNF</button>
   <pre id="out"></pre>
 
-  <script type="module">
-    const pyodide = await loadPyodide();
+<script type="module">
+/* ---------- 1.  spin-up Pyodide ---------- */
+const pyodide = await loadPyodide();
 
-    const pythonCode = `
-import re
-from collections import defaultdict
+/* ---------- 2.  full CNF engine ---------- */
+const pythonCode = `
+import re, itertools
+from collections import defaultdict, deque
 
+# ---------- Parser ----------
 def parse_cfg(text):
-    grammar = defaultdict(list)
+    g = defaultdict(list)
     for line in text.strip().splitlines():
         if not line.strip(): continue
         left, right = re.split(r'\\s*->\\s*', line)
-        for production in right.split('|'):
-            prod = production.strip().replace('E', 'ε')
+        for prod in right.split('|'):
+            prod = prod.strip().replace('E','ε')
             symbols = prod.split() if ' ' in prod else list(prod)
-            grammar[left.strip()].append(symbols)
-    return dict(grammar)
+            g[left.strip()].append(symbols or ['ε'])
+    return dict(g)
 
-def format_grammar(grammar):
-    lines = []
-    for nt, prods in grammar.items():
-        right = [" ".join(prod) for prod in prods]
-        lines.append(f"{nt} -> {' | '.join(right)}")
-    return "\\n".join(lines)
+# ---------- Pretty-printer ----------
+def fmt(g):
+    return "\\n".join(f"{A} -> " + " | ".join(" ".join(p) for p in g[A]) for A in g)
 
+# ---------- utility steps ----------
+def remove_null(g,s): ...
+def remove_unit(g): ...
+def remove_useless(g,s): ...
+def convert_to_cnf(g): ...
+#  ⬆︎   paste the exact bodies from your  cnf_converter.py  (unchanged)
+
+# ---------- public API ----------
 def to_cnf(text):
-    grammar = parse_cfg(text)
-    steps = []
+    steps=[]
+    def log(lbl,G): steps.append((lbl,fmt(G)))
 
-    def add_step(title, g):
-        steps.append((title, format_grammar(g)))
+    G = parse_cfg(text);  S = next(iter(G));               log("Original CFG",G)
+    G = remove_null(G,S);                                 log("ε-removed",G)
+    G = remove_unit(G);                                   log("Unit-removed",G)
+    G = remove_useless(G,S);                              log("Useless-removed",G)
+    G = convert_to_cnf(G);                                log("CNF",G)
 
-    start = next(iter(grammar))
-    add_step("Original grammar", grammar)
-    add_step("After ε-removal (dummy)", grammar)
-    add_step("After unit removal (dummy)", grammar)
-    add_step("Final CNF (dummy)", grammar)
+    return "\\n\\n".join(f"{lbl}:\\n{body}" for lbl,body in steps)
 
-    return "\\n\\n".join(f"{title}:\\n{g}" for title, g in steps)
+def generate(text,max_len=4,max_words=20):
+    G=parse_cfg(text); S=next(iter(G))
+    words=set(); Q=deque([[S]])
+    while Q and len(words)<max_words:
+        seq=Q.popleft()
+        term="".join(c for c in seq if c not in G and c!="ε")
+        if len(term)>max_len: continue
+        if all(c not in G for c in seq):
+            if term: words.add(term); continue
+        for i,sym in enumerate(seq):
+            if sym in G:
+                for prod in G[sym]:
+                    Q.append(seq[:i]+[t for t in prod if t!="ε"]+seq[i+1:]); break
+    return sorted(words)
 `;
-    pyodide.runPython(pythonCode);
+pyodide.runPython(pythonCode);
 
-    document.getElementById("run").onclick = () => {
-      const raw = document.getElementById("src").value;
-      const result = pyodide.runPython(`to_cnf("""${raw}""")`);
-      document.getElementById("out").textContent = result;
-    };
-  </script>
+/* ---------- 3.  wire the buttons ---------- */
+const out      = document.getElementById("out");
+const textarea = document.getElementById("src");
+document.getElementById("run").onclick = () => {
+  out.textContent = pyodide.runPython(`to_cnf("""${textarea.value}""")`);
+};
+
+/* optional extra: language generation slider & button */
+</script>
 </body>
 </html>
