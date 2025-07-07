@@ -143,12 +143,31 @@ def format_grammar(grammar):
     return "\\n".join(lines)
 
 def to_cnf(text):
+    steps = []
+    def add_step(label, g):
+        steps.append((label, format_grammar(g)))
+
     grammar = parse_cfg(text)
     start = next(iter(grammar))
+    add_step("Original grammar", grammar)
+
     grammar = remove_null_productions(grammar, start)
+    add_step("After removing ε-productions", grammar)
+
     grammar = remove_unit_productions(grammar)
+    add_step("After removing unit productions", grammar)
+
+    grammar = remove_useless_symbols(grammar, start)
+    add_step("After removing useless symbols", grammar)
+
     grammar = convert_to_cnf(grammar)
-    return format_grammar(grammar)
+    add_step("Chomsky Normal Form (CNF)", grammar)
+
+    # Package steps as a plain text block
+    result = ""
+    for label, g in steps:
+        result += f"{label}:\n{g}\n\n"
+    return result
 `;
     pyodide.runPython(pythonCode);
 
