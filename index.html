@@ -16,7 +16,9 @@
 A -> B | S
 B -> b | ε</textarea><br>
   <button id="run">Convert to CNF</button>
+  <button id="gen">Generate Words</button>
   <pre id="out"></pre>
+  <pre id="words"></pre>
 
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
@@ -196,7 +198,12 @@ def cfg_to_cnf(text):
     def step(lbl):
         log.append((lbl, format_grammar(G)))
 
-    step("Original CFG")
+    if any(S in p for P in G.values() for p in P):
+        G = {**{"S0": [[S]]}, **G}
+        S = "S0"
+        step("Add new start symbol")
+    else:
+        step("Original CFG")
     G = remove_null_productions(G, S);     step("ε-removed")
     G = remove_unit_productions(G);        step("unit-removed")
     G = remove_useless_symbols(G, S);      step("useless-removed")
@@ -232,13 +239,12 @@ document.getElementById("run").onclick = () => {
   out.textContent = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
 };
 
-/* OPTIONAL: uncomment if you add <button id="gen">Generate</button>
+const wordsOut = document.getElementById("words");
 document.getElementById("gen").onclick = () => {
-  const txt = src.value.replaceAll("\\r","");
-  const words = pyodide.runPython(\`generate_words("""\${txt}""")\`);
-  out.textContent = "Generated words: " + words.join(", ");
+  const txt = src.value.replaceAll("\r", "");
+  const words = pyodide.runPython(`generate_words("""${txt}""")`);
+  wordsOut.textContent = "Generated words: " + words.join(", ");
 };
-*/
 </script>
 </body>
 </html>
