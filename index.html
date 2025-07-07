@@ -52,6 +52,28 @@ const pythonCode = `
 import re
 from collections import defaultdict, deque
 
+# ─── tiny tokenizer that works with or without spaces ─────────────
+def _tokenize(rh_side: str):
+    """
+    Turn 'ASB', 'A1B', 'bb' … into ['A','S','B'], ['A1','B'], ['b','b'] …
+    Skips any whitespace in the RHS.
+    """
+    out, i = [], 0
+    while i < len(rh_side):
+        c = rh_side[i]
+        if c.isspace():                     # ignore spaces
+            i += 1; continue
+        if c.isupper():                     # VARIABLE (capital + digits)
+            j = i + 1
+            while j < len(rh_side) and rh_side[j].isdigit():
+                j += 1
+            out.append(rh_side[i:j])        # e.g. 'A', 'A1', ...
+            i = j
+        else:                               # single-char terminal
+            out.append(c)                   # e.g. 'a', 'b'
+            i += 1
+    return out
+
 # ─── Parsing ────────────────────────────────────────────
 def parse_cfg(text):
     g = defaultdict(list)
@@ -70,10 +92,7 @@ def parse_cfg(text):
 
                 g[left].append(['ε'])
                 continue
-            if ' ' in prod:
-                symbols = [tok.strip() for tok in prod.split() if tok.strip()]
-            else:
-                symbols = list(prod)
+            symbols = _tokenize(prod)
             g[left].append(symbols)
     return dict(g)
 
