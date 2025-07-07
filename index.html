@@ -166,11 +166,12 @@ def cfg_to_cnf(text):
         log.append((lbl, format_grammar(G)))
 
     step("Original CFG")
-    G = remove_null_productions(G,S);     step("ε-removed")
-    G = remove_unit_productions(G);       step("unit-removed")
-    G = remove_useless_symbols(G,S);      step("useless-removed")
-    G = convert_to_cnf(G,S);              log.append(("CNF", format_grammar(G)))
-    return log
+    G = remove_null_productions(G, S);     step("ε-removed")
+    G = remove_unit_productions(G);        step("unit-removed")
+    G = remove_useless_symbols(G, S);      step("useless-removed")
+    G = convert_to_cnf(G, S)
+    log.append(("CNF", format_grammar(G)))
+    return "\\n\\n".join(f"{lbl}:\\n{body}" for lbl, body in log)
 
 def generate_words(text, max_len=4, max_words=20):
     G = parse_cfg(text); S = next(iter(G))
@@ -196,9 +197,8 @@ const out = document.getElementById("out");
 const src = document.getElementById("src");
 
 document.getElementById("run").onclick = () => {
-  const txt = src.value.replaceAll("\\r","");
-  const steps = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
-  out.textContent = steps.map(s => \`\${s[0]}:\\n\${s[1]}\\n\`).join("\\n");
+  const txt = src.value.replaceAll("\r", "");
+  out.textContent = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
 };
 
 /* OPTIONAL: uncomment if you add <button id="gen">Generate</button>
@@ -211,3 +211,4 @@ document.getElementById("gen").onclick = () => {
 </script>
 </body>
 </html>
+
