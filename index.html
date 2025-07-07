@@ -355,15 +355,15 @@ def cfg_to_regex(text):
         for i in states:
             if i == q:
                 continue
-            iq = trans.get((i, q), '')
-            if not iq:
+            if (i, q) not in trans:
                 continue
+            iq = trans[(i, q)]
             for j in states:
                 if j == q:
                     continue
-                qj = trans.get((q, j), '')
-                if not qj:
+                if (q, j) not in trans:
                     continue
+                qj = trans[(q, j)]
                 new = iq + rq_star + qj
                 key = (i, j)
                 if trans[key]:
@@ -373,8 +373,13 @@ def cfg_to_regex(text):
                     trans[key] = new
         for k in [k for k in trans if q in k]:
             del trans[k]
-
-    return trans.get((start, final), '')
+    r_ss = trans.get((start, start), '')
+    r_sf = trans.get((start, final), '')
+    regex = (star(r_ss) + r_sf) if r_sf is not None else star(r_ss)
+    r_ff = trans.get((final, final), '')
+    if r_ff:
+        regex += star(r_ff)
+    return regex
 `;
 pyodide.runPython(pythonCode);
 
