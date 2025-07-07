@@ -5,9 +5,32 @@
   <title>CFG → CNF Converter (Pyodide)</title>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.28.0/full/pyodide.js"></script>
   <style>
-    body { font-family: system-ui; padding: 1rem; max-width: 42rem; margin: auto; }
-    textarea { width: 100%; }
-    pre { padding: 1rem; background: #f6f8fa; white-space: pre-wrap; }
+    body {
+      font-family: system-ui;
+      padding: 1rem;
+      max-width: 42rem;
+      margin: auto;
+      background: #1e1e1e;
+      color: #ddd;
+    }
+    textarea {
+      width: 100%;
+      background: #111;
+      color: #ddd;
+      border: 1px solid #555;
+    }
+    button {
+      background: #333;
+      color: #ddd;
+      border: 1px solid #555;
+      padding: 0.5rem 1rem;
+      margin: 0.25rem 0;
+    }
+    pre {
+      padding: 1rem;
+      background: #2b2b2b;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
@@ -255,16 +278,41 @@ pyodide.runPython(pythonCode);
 const out = document.getElementById("out");
 const src = document.getElementById("src");
 
+// Map each letter to a consistent color
+const colorMap = {};
+const palette = [
+  '#e6194b','#3cb44b','#ffe119','#0082c8','#f58231',
+  '#911eb4','#46f0f0','#f032e6','#d2f53c','#fabebe',
+  '#008080','#e6beff','#aa6e28','#fffac8','#800000',
+  '#aaffc3','#808000','#ffd8b1','#000080','#808080',
+  '#ffd700','#40e0d0','#e9967a','#f4a460','#b0c4de'
+];
+
+function getColor(c) {
+  if (!colorMap[c]) {
+    colorMap[c] = palette[Object.keys(colorMap).length % palette.length];
+  }
+  return colorMap[c];
+}
+
+function colorize(text) {
+  return text
+    .replace(/[A-Za-z]/g, c => `<span style="color:${getColor(c)}">${c}</span>`)
+    .replace(/\|/g, '<b>|</b>');
+}
+
 document.getElementById("run").onclick = () => {
   const txt = src.value.replaceAll("\r", "");
-  out.textContent = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
+  const result = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
+  out.innerHTML = colorize(result);
 };
 
 const wordsOut = document.getElementById("words");
 document.getElementById("gen").onclick = () => {
   const txt = src.value.replaceAll("\r", "");
   const words = pyodide.runPython(`generate_words("""${txt}""")`);
-  wordsOut.textContent = "Generated words: " + words.join(", ");
+  const colored = words.map(w => colorize(w)).join(", ");
+  wordsOut.innerHTML = "Generated words: " + colored;
 };
 </script>
 </body>
