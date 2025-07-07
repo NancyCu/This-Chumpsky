@@ -79,7 +79,7 @@ def parse_cfg(text):
 
 def format_grammar(g):
     return "\\n".join(
-        f"{A} -> " + " | ".join(" ".join(p) for p in g[A])
+        f"{A} -> " + " | ".join("".join(p) for p in g[A])
         for A in g
     )
 
@@ -295,10 +295,21 @@ function getColor(c) {
   return colorMap[c];
 }
 
+function titleCase(str) {
+  return str.replace(/(?:^|[-\s])(\S)/g, s => s.toUpperCase());
+}
+
 function colorize(text) {
-  return text
-    .replace(/[A-Za-z]/g, c => `<span style="color:${getColor(c)}">${c}</span>`)
-    .replace(/\|/g, '<b>|</b>');
+  return text.split('\n').map(line => {
+    const trimmed = line.trim();
+    if (trimmed.endsWith(':') && !trimmed.includes('->')) {
+      const label = titleCase(trimmed.slice(0, -1));
+      return `<span style="text-decoration: underline">${label}:</span>`;
+    }
+    return line
+      .replace(/[A-Za-z]/g, c => `<span style="color:${getColor(c)}">${c}</span>`)
+      .replace(/\|/g, '<b>|</b>');
+  }).join('\n');
 }
 
 document.getElementById("run").onclick = () => {
