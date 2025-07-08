@@ -290,18 +290,22 @@ def cfg_to_cnf(text):
 
 def generate_words(text, max_len=4, max_words=20):
     G = parse_cfg(text); S = next(iter(G))
-    words, dq = set(), deque([[S]])
+    words, dq, seen = set(), deque([[S]]), set()
     while dq and len(words) < max_words:
         seq = dq.popleft()
+        if tuple(seq) in seen or len(seq) > max_len * 2:
+            continue
+        seen.add(tuple(seq))
         w = "".join(c for c in seq if c not in G and c != 'ε')
         if len(w) > max_len:
             continue
         if all(c not in G for c in seq):
-            words.add(w); continue
-        for i,s in enumerate(seq):
+            words.add(w)
+            continue
+        for i, s in enumerate(seq):
             if s in G:
                 for p in G[s]:
-                    dq.append(seq[:i] + [t for t in p if t!='ε'] + seq[i+1:])
+                    dq.append(seq[:i] + [t for t in p if t != 'ε'] + seq[i + 1:])
                 break
     return sorted(words)
 
