@@ -45,6 +45,10 @@ B → b | ε
   <pre id="regex"></pre>
   <button id="gen">Generate Words</button>
   <pre id="words"></pre>
+  <label for="guess">Guess a word:</label>
+  <input id="guess" type="text" />
+  <button id="check">Check</button>
+  <span id="guess-result"></span>
   <div id="progression-list"></div>
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
@@ -309,6 +313,31 @@ def generate_words(text, max_len=4, max_words=20):
                 break
     return sorted(words)
 
+def word_in_language(text, word, max_len=None):
+    G = parse_cfg(text)
+    S = next(iter(G))
+    if max_len is None:
+        max_len = len(word)
+    dq, seen = deque([[S]]), set()
+    while dq:
+        seq = dq.popleft()
+        if tuple(seq) in seen or len(seq) > max_len * 2:
+            continue
+        seen.add(tuple(seq))
+        w = "".join(c for c in seq if c not in G and c != 'ε')
+        if len(w) > max_len:
+            continue
+        if all(c not in G for c in seq):
+            if w == word:
+                return True
+            continue
+        for i, s in enumerate(seq):
+            if s in G:
+                for p in G[s]:
+                    dq.append(seq[:i] + [t for t in p if t != 'ε'] + seq[i + 1:])
+                break
+    return False
+
 def cfg_to_regex(text):
     g = parse_cfg(text)
     start = next(iter(g))
@@ -498,6 +527,23 @@ function renderWords() {
   const colored = words.map(w => colorize(w)).join(", ");
   wordsOut.innerHTML = "Generated words: " + colored;
 }
+
+const guessInput = document.getElementById("guess");
+const guessResult = document.getElementById("guess-result");
+document.getElementById("check").onclick = () => {
+  const word = guessInput.value.trim();
+  if (!word) return;
+  const txt = src.value.replaceAll("\r", "");
+  const pyCall = `word_in_language("""${txt}""", ${JSON.stringify(word)})`;
+  const ok = pyodide.runPython(pyCall);
+  if (ok) {
+    guessResult.textContent = "Correct!";
+    guessResult.style.color = "lightgreen";
+  } else {
+    guessResult.textContent = "Incorrect";
+    guessResult.style.color = "salmon";
+  }
+};
 
 document.getElementById("gen").onclick = () => {
   wordLimit += 5;
