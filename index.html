@@ -359,21 +359,64 @@ def word_in_language(text, word, max_len=None):
                 break
     return False
 
+def cfg_to_regex_approximation(text):
+    """
+    Approximation algorithm for non-regular grammars
+    This creates a simplified regular approximation
+    """
+    g = parse_cfg(text)
+    start = next(iter(g))
+    
+    # Simple approximation: extract terminals and create basic patterns
+    terminals = set()
+    has_epsilon = False
+    
+    for A, P in g.items():
+        for p in P:
+            if p == ['ε']:
+                has_epsilon = True
+            else:
+                for symbol in p:
+                    if symbol not in g:  # terminal
+                        terminals.add(symbol)
+    
+    if not terminals:
+        return 'ε' if has_epsilon else ''
+    
+    # Create simple approximation
+    if len(terminals) == 1:
+        t = list(terminals)[0]
+        if has_epsilon:
+            return f'{t}*'
+        else:
+            return t
+    else:
+        pattern = '|'.join(sorted(terminals))
+        if has_epsilon:
+            return f'({pattern})*'
+        else:
+            return f'({pattern})+'
+
 def cfg_to_regex(text):
     g = parse_cfg(text)
     start = next(iter(g))
+    
+    # Check if grammar is regular
     for A, P in g.items():
         for p in P:
             if p == ['ε']:
                 continue
             if len(p) == 1:
                 if p[0] in g:
-                    return 'Grammar is not regular'
+                    # Not regular, return approximation
+                    return cfg_to_regex_approximation(text)
             elif len(p) == 2:
                 if p[0] in g or p[1] not in g:
-                    return 'Grammar is not regular'
+                    # Not regular, return approximation
+                    return cfg_to_regex_approximation(text)
             else:
-                return 'Grammar is not regular'
+                # Not regular, return approximation
+                return cfg_to_regex_approximation(text)
 
     states = list(g.keys()) + ['F']
     final = 'F'
@@ -383,13 +426,13 @@ def cfg_to_regex(text):
         if not trans[(u, v)]:
             trans[(u, v)] = label
         else:
-            if label not in trans[(u, v)].split('|'):
+            if label and label not in trans[(u, v)].split('|'):
                 trans[(u, v)] += '|' + label
 
     for A, P in g.items():
         for p in P:
             if p == ['ε']:
-                add_edge(A, final, '')
+                add_edge(A, final, '')  # epsilon transition
             elif len(p) == 1:
                 add_edge(A, final, p[0])
             else:
@@ -421,68 +464,36 @@ def cfg_to_regex(text):
                 new = iq + rq_star + qj
                 key = (i, j)
                 if trans[key]:
-                    if new not in trans[key].split('|'):
+                    if new and new not in trans[key].split('|'):
                         trans[key] += '|' + new
                 else:
                     trans[key] = new
         for k in [k for k in trans if q in k]:
             del trans[k]
+    
+    # Fixed final regex construction
     r_ss = trans.get((start, start), '')
     r_sf = trans.get((start, final), '')
-    regex = (star_regex(r_ss) + r_sf) if r_sf is not None else star_regex(r_ss)
     r_ff = trans.get((final, final), '')
+    
+    # Build final regex properly
+    if r_sf:  # There is a path from start to final
+        regex = star_regex(r_ss) + r_sf
+    else:
+        # No path from start to final, just loops at start
+        regex = star_regex(r_ss)
+    
     if r_ff:
         regex += star_regex(r_ff)
-    return regex
-
-
-def star(value):
-    """
-    Dummy implementation of star() for demonstration purposes.
-    This function could perform additional formatting or processing on the value.
-    """
-    # For the sake of example, simply return the string representation of the value
-    return str(value) if value is not None else ''
-
-
-def process_trans(trans, start, final, key):
-    # Retrieve values safely using trans.get() with a default of None
-    r_ss = trans.get((start, start), None)
-    r_sf = trans.get((start, final), None)
-    regex = (star(r_ss) + r_sf) if r_sf is not None else star(r_ss)
-    r_ff = trans.get((final, final), None)
-
-    # Option 1: Directly get the value using trans.get() (None will be returned by default if key is missing)
-    value_option1 = trans.get(key)
-
-    # Option 2: Check explicitly if the key exists to handle a missing key case
-    if key in trans:
-        value_option2 = trans[key]
-    else:
-        value_option2 = None  # or an alternative default action
-
-    return {
-        'regex': regex,
-        'r_ff': r_ff,
-        'value_option1': value_option1,
-        'value_option2': value_option2
-    }
+    
+    return regex if regex else 'ε'
 
 
 if __name__ == '__main__':
-    # Dummy dictionary for trans
-    trans = {
-        ('a', 'a'): 'foo',
-        ('a', 'b'): 'bar',
-        ('b', 'b'): 'baz',
-        'sample_key': 'sample_value'
-    }
-    start = 'a'
-    final = 'b'
-    key = 'sample_key'
-
-    result = process_trans(trans, start, final, key)
-    print("Result:", result)
+    # Test basic functionality
+    test_grammar = "S → aB\\nB → bB | ε"
+    result = cfg_to_regex(test_grammar)
+    print(f"Test result: {result}")
 `;
 pyodide.runPython(pythonCode);
 
@@ -539,11 +550,7 @@ const wordsOut = document.getElementById("words");
 function renderWords() {
   const txt = src.value.replaceAll("\r", "");
   const regex = pyodide.runPython(`cfg_to_regex("""${txt}""")`);
-  if (regex === "Grammar is not regular") {
-    regexOut.textContent = "RegExp approximate: a(b)*";
-  } else {
-    regexOut.textContent = regex;
-  }
+  regexOut.textContent = regex;
   const words = pyodide.runPython(`generate_words("""${txt}""", max_words=${wordLimit})`);
   const colored = words.map(w => colorize(w)).join(", ");
   wordsOut.innerHTML = "Generated words: " + colored;
