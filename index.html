@@ -373,10 +373,10 @@ def cfg_to_regex(text):
                     trans[key] = new
         for k in [k for k in trans if q in k]:
             del trans[k]
-    r_ss = trans.get((start, start), '')
-    r_sf = trans.get((start, final), '')
+    r_ss = trans.get((start, start), None)
+    r_sf = trans.get((start, final), None)
     regex = (star(r_ss) + r_sf) if r_sf is not None else star(r_ss)
-    r_ff = trans.get((final, final), '')
+    r_ff = trans.get((final, final), None)
     if r_ff:
         regex += star(r_ff)
     return regex
