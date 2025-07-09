@@ -54,6 +54,7 @@
 
   <h2>2. Describe the Language</h2>
   <textarea id="grammar-desc" rows="3" placeholder="e.g., { w | w starts and ends with the same symbol }"></textarea>
+  <pre id="desc-output"></pre>
 
   <h2>3. CNF Conversion</h2>
   <pre id="out"></pre>
@@ -493,6 +494,8 @@ const out = document.getElementById("out");
 const src = document.getElementById("src");
 const regexOut = document.getElementById("regex");
 let wordLimit = 5;
+const descInput = document.getElementById("grammar-desc");
+const descOutput = document.getElementById("desc-output");
 
 // Map each letter to a consistent color
 const colorMap = {};
@@ -532,6 +535,7 @@ document.getElementById("run").onclick = () => {
   const txt = src.value.replaceAll("\r", "");
   const result = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
   out.innerHTML = colorize(result);
+  descOutput.textContent = descInput.value.trim();
   // Reset wordLimit and update generated words for new grammar
   wordLimit = 5;
   renderWords();
