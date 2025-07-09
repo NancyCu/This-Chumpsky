@@ -10,7 +10,8 @@ Normal Form (CNF) directly in your browser. It runs entirely offline using
 2. **Open `index.html`** in any modern web browser.
 3. A page titled *"Con. Free Grammar → Chomsky Normal Form"* will appear.
 
-Paste your grammar, hit **Convert to CNF**, and the page will display the
+Paste your grammar and optionally jot down a short description of the
+language it generates. Hit **Convert to CNF**, and the page will display the
 transformed grammar along with each conversion stage. You can also click
 **Generate Words** to produce a few sample words from your grammar.
 
