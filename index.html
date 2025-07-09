@@ -54,23 +54,26 @@ B → b | ε
 </textarea><br>
   <button id="run">Convert to CNF</button>
 
-  <h2>2. CNF Conversion</h2>
+  <h2>2. Describe the Language</h2>
+  <textarea id="grammar-desc" rows="3" placeholder="e.g., { w | w starts and ends with the same symbol }"></textarea>
+
+  <h2>3. CNF Conversion</h2>
   <pre id="out"></pre>
 
-  <h2>3. Regular Expression</h2>
+  <h2>4. Regular Expression</h2>
   <pre id="regex"></pre>
 
-  <h2>4. Generate Words</h2>
+  <h2>5. Generate Words</h2>
   <button id="gen">Generate Words</button>
   <pre id="words"></pre>
 
-  <h2>5. Guess a Word</h2>
+  <h2>6. Guess a Word</h2>
   <label for="guess">Guess a word:</label>
   <input id="guess" type="text" />
   <button id="check">Check</button>
   <span id="guess-result"></span>
 
-  <h2>6. Word Progression</h2>
+  <h2>7. Word Progression</h2>
   <div id="progression-list"></div>
 <script type="module">
 /* ========== 1 ▸ spin-up Python in the browser ========== */
