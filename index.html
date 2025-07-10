@@ -533,9 +533,13 @@ function colorize(text) {
 
 document.getElementById("run").onclick = () => {
   const txt = src.value.replaceAll("\r", "");
-  const result = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
-  out.innerHTML = colorize(result);
   descOutput.textContent = descInput.value.trim();
+  try {
+    const result = pyodide.runPython(`cfg_to_cnf("""${txt}""")`);
+    out.innerHTML = colorize(result);
+  } catch (err) {
+    out.textContent = "Error: " + err;
+  }
   // Reset wordLimit and update generated words for new grammar
   wordLimit = 5;
   renderWords();
